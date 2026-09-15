@@ -93,3 +93,10 @@ def test_upload_rejects_payload_over_10_mb():
         files={"file": ("large.txt", b"x" * (10 * 1024 * 1024 + 1), "text/plain")},
     )
     assert response.status_code == 413
+
+
+def test_security_headers_are_present():
+    response = TestClient(app).get("/")
+    assert response.headers["content-security-policy"].startswith("default-src 'self'")
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
