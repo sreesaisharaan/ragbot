@@ -31,7 +31,7 @@ The browser app is at `http://127.0.0.1:8000/`.
 
 ## Deploy to Vercel
 
-This repository includes `api/index.py` and `vercel.json` so Vercel can run the FastAPI app and serve the same browser UI. Import the repository into Vercel, set the `GROQ_API_KEY`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` environment variables in Vercel Project Settings, and deploy. Do not upload `.env`; it is ignored by Git.
+This repository includes `api/index.py` and `vercel.json` so Vercel can run the FastAPI app and serve the same browser UI. Import the repository into Vercel, set `GROQ_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and a long random `RAGBOT_ACCESS_TOKEN` in Vercel Project Settings, and deploy. Do not upload `.env`; it is ignored by Git.
 
 ## Supabase persistence
 
@@ -44,6 +44,8 @@ set SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
 ```
 
 3. Start with `python run_server.py`. Existing rows are loaded into the local retriever at startup, while new uploads and chats are written through Supabase REST.
+
+The API enforces a 10 MB upload limit and a best-effort limit of 30 upload/ask requests per IP per minute per serverless instance. When `RAGBOT_ACCESS_TOKEN` is set, upload and ask requests require `Authorization: Bearer <token>`; the website exposes a password field for that token and does not persist it.
 
 Set `RAG_DEBUG=1` for exact prompt/context diagnostics. Normal INFO logs include chunk previews, embedding dimensions, retrieval scores, fallback decisions, and provider call status. The app module itself does not load dotenv files when imported, which keeps the offline test suite isolated from production credentials.
 

@@ -7,6 +7,12 @@ const questionInput = document.querySelector('#question');
 const messages = document.querySelector('#messages');
 const emptyState = document.querySelector('#empty-state');
 const sendButton = document.querySelector('.send-button');
+const accessToken = document.querySelector('#access-token');
+
+function authHeaders(headers = {}) {
+  const token = accessToken.value.trim();
+  return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
+}
 
 browseButton.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('click', (event) => {
@@ -31,7 +37,7 @@ async function uploadFile(file) {
   const formData = new FormData();
   formData.append('file', file);
   try {
-    const response = await fetch('/documents/upload', { method: 'POST', body: formData });
+    const response = await fetch('/documents/upload', { method: 'POST', headers: authHeaders(), body: formData });
     const data = await response.json();
     if (!response.ok) throw new Error(data.detail || 'Upload failed');
     updateLastFile(`${data.chunks_added} chunk${data.chunks_added === 1 ? '' : 's'} ready`);
@@ -63,7 +69,7 @@ askForm.addEventListener('submit', async event => {
   const typing = addMessage('RAGbot', 'Thinking…', false, true);
   sendButton.disabled = true;
   try {
-    const response = await fetch('/ask', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ question }) });
+    const response = await fetch('/ask', { method: 'POST', headers: authHeaders({'Content-Type': 'application/json'}), body: JSON.stringify({ question }) });
     const data = await response.json();
     if (!response.ok) throw new Error(data.detail || 'The question could not be answered');
     typing.remove(); addMessage('RAGbot', data.answer, false, false, data.sources || []);

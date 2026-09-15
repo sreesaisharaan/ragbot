@@ -6,10 +6,12 @@ import logging
 import math
 import os
 import re
+import secrets
+import time
 from pathlib import Path, PurePath
 from typing import Iterable
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -23,6 +25,9 @@ from supabase_store import PersistenceError, SupabaseStore
 BASE_DIR = Path(__file__).parent
 _WORD_RE = re.compile(r"[A-Za-z0-9']+")
 _VECTOR_SIZE = 128
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+RATE_LIMIT_PER_MINUTE = 30
+_rate_windows: dict[str, list[float]] = {}
 
 
 def _load_local_env() -> None:
@@ -151,6 +156,25 @@ class AskRequest(BaseModel):
     question: str = Field(min_length=1)
 
 
+def _authorize(request: Request) -> None:
+    configured = os.getenv("RAGBOT_ACCESS_TOKEN", "").strip()
+    if configured:
+        provided = request.headers.get("authorization", "")
+        scheme, _, token = provided.partition(" ")
+        if scheme.lower() != "bearer" or not secrets.compare_digest(token, configured):
+            raise HTTPException(status_code=401, detail="A valid access token is required")
+
+
+def _rate_limit(request: Request) -> None:
+    now = time.monotonic()
+    client = request.client.host if request.client else "unknown"
+    window = [stamp for stamp in _rate_windows.get(client, []) if now - stamp < 60]
+    if len(window) >= RATE_LIMIT_PER_MINUTE:
+        raise HTTPException(status_code=429, detail="Too many requests; try again in a minute")
+    window.append(now)
+    _rate_windows[client] = window
+
+
 app = FastAPI(title="RAGbot", version="1.1")
 app.state.store = DocumentStore()
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "web")), name="static")
@@ -162,12 +186,17 @@ def home():
 
 
 @app.post("/documents/upload")
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(request: Request, file: UploadFile = File(...)):
+    _authorize(request)
+    _rate_limit(request)
     filename = PurePath(file.filename or "").name
     if not filename or not filename.lower().endswith(".txt"):
         raise HTTPException(status_code=415, detail="Only TXT files are supported in this MVP")
     try:
-        text = (await file.read()).decode("utf-8")
+        payload = await file.read(MAX_UPLOAD_BYTES + 1)
+        if len(payload) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="TXT files must be 10 MB or smaller")
+        text = payload.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=400, detail="TXT files must be UTF-8 encoded") from exc
     if not text.strip():
@@ -180,10 +209,12 @@ async def upload_document(file: UploadFile = File(...)):
 
 
 @app.post("/ask")
-def ask(request: AskRequest):
+def ask(request: Request, body: AskRequest):
+    _authorize(request)
+    _rate_limit(request)
     try:
-        result = app.state.store.bot().answer(request.question)
-        app.state.store.record_chat(request.question, result)
+        result = app.state.store.bot().answer(body.question)
+        app.state.store.record_chat(body.question, result)
         return result
     except PersistenceError as exc:
         raise HTTPException(status_code=503, detail="Chat persistence is temporarily unavailable") from exc

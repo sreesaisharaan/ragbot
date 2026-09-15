@@ -12,6 +12,10 @@
     <header class="topbar">
       <a class="brand" href="/" aria-label="RAGbot home"><span class="brand-mark">R</span><span>RAGbot</span></a>
       <div class="status"><span class="status-dot"></span><span id="connection-label">Local engine ready</span></div>
+      <label class="token-control" title="Only needed when RAGBOT_ACCESS_TOKEN is configured">
+        <span>Access token</span>
+        <input id="access-token" type="password" autocomplete="off" placeholder="optional">
+      </label>
     </header>
 
     <section class="workspace" aria-label="RAGbot workspace">

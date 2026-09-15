@@ -74,3 +74,22 @@ def test_ask_requires_a_question():
     client = TestClient(app)
     response = client.post("/ask", json={"question": "  "})
     assert response.status_code == 422
+
+
+def test_protected_data_endpoints_require_access_token(monkeypatch):
+    monkeypatch.setenv("RAGBOT_ACCESS_TOKEN", "test-token")
+    client = TestClient(app)
+    response = client.post("/ask", json={"question": "hello"})
+    assert response.status_code == 401
+    response = client.post("/ask", headers={"Authorization": "Bearer test-token"}, json={"question": "hello"})
+    assert response.status_code == 200
+    monkeypatch.delenv("RAGBOT_ACCESS_TOKEN")
+
+
+def test_upload_rejects_payload_over_10_mb():
+    client = TestClient(app)
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("large.txt", b"x" * (10 * 1024 * 1024 + 1), "text/plain")},
+    )
+    assert response.status_code == 413
