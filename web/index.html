@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A grounded document question-answering workspace.">
+  <title>RAGbot — Ask your documents</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="RAGbot home"><span class="brand-mark">R</span><span>RAGbot</span></a>
+      <div class="status"><span class="status-dot"></span><span id="connection-label">Local engine ready</span></div>
+    </header>
+
+    <section class="workspace" aria-label="RAGbot workspace">
+      <aside class="sidebar">
+        <div>
+          <p class="eyebrow">Workspace</p>
+          <h1>Ask your<br><em>documents.</em></h1>
+          <p class="intro">Upload a text file, then ask focused questions. Answers stay grounded in the context you provide.</p>
+        </div>
+        <div class="upload-box" id="drop-zone">
+          <input id="file-input" type="file" accept=".txt,text/plain" hidden>
+          <div class="upload-icon" aria-hidden="true">↑</div>
+          <strong>Drop a TXT file here</strong>
+          <span>or <button class="link-button" id="browse-button" type="button">browse files</button></span>
+          <small>UTF-8 text only · max 10 MB</small>
+        </div>
+        <div id="file-list" class="file-list" aria-live="polite"></div>
+      </aside>
+
+      <section class="conversation-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Conversation</p><h2>Document Q&amp;A</h2></div>
+          <span class="secure-label">Grounded answers</span>
+        </div>
+        <div id="messages" class="messages" aria-live="polite">
+          <div class="empty-state" id="empty-state">
+            <div class="empty-orb">✦</div>
+            <h3>Start with a document</h3>
+            <p>Upload a TXT file on the left, then ask anything about what it contains.</p>
+          </div>
+        </div>
+        <form id="ask-form" class="ask-form">
+          <label class="sr-only" for="question">Ask a question about your documents</label>
+          <textarea id="question" rows="1" placeholder="Ask something about your documents…" required></textarea>
+          <button class="send-button" type="submit" aria-label="Send question"><span>↑</span></button>
+        </form>
+        <p class="hint">Answers are generated only from uploaded document context.</p>
+      </section>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
